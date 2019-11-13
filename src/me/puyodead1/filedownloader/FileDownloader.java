@@ -4,6 +4,7 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 
+import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -14,6 +15,7 @@ import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.DirectoryDialog;
 import org.eclipse.swt.events.MouseAdapter;
 import org.eclipse.swt.events.MouseEvent;
+import org.eclipse.wb.swt.SWTResourceManager;
 
 public class FileDownloader {
 	private static final List<String> allowedExts = Arrays.asList("mp4", "webm", "mp3", "wav", "iso", "rar", "zip", "java");
@@ -28,19 +30,19 @@ public class FileDownloader {
 	 */
 	public static void main(String[] args) {
 		Display display = Display.getDefault();
-		Shell shell = new Shell();
-		shell.setSize(755, 434);
-		shell.setText("SWT Application");
+		Shell shlNoBsFile = new Shell();
+		shlNoBsFile.setSize(755, 222);
+		shlNoBsFile.setText("No BS File Downloader");
 
-		txtUrl = new Text(shell, SWT.BORDER);
-		txtUrl.setBounds(10, 106, 719, 21);
+		txtUrl = new Text(shlNoBsFile, SWT.BORDER);
+		txtUrl.setBounds(10, 31, 719, 21);
 
-		Label lblUrl = new Label(shell, SWT.NONE);
+		Label lblUrl = new Label(shlNoBsFile, SWT.NONE);
 		lblUrl.setAlignment(SWT.CENTER);
-		lblUrl.setBounds(10, 85, 719, 15);
+		lblUrl.setBounds(10, 10, 719, 15);
 		lblUrl.setText("URL");
 
-		Button btnDownload = new Button(shell, SWT.NONE);
+		Button btnDownload = new Button(shlNoBsFile, SWT.NONE);
 		btnDownload.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseDown(MouseEvent e) {
@@ -55,9 +57,10 @@ public class FileDownloader {
 								final String fileExt = fileExtSplit[fileExtSplit.length - 1];
 								if (allowedExts.contains(fileExt)) {
 									final String savePath = txtSavePath.getText();
-									new DownloadDialog(shell, shell.getStyle(), url, fileName, savePath);
+									final DownloadDialog dialog = new DownloadDialog(shlNoBsFile, shlNoBsFile.getStyle(), url, fileName, savePath + File.separator + fileName);
+									dialog.open();
 								} else {
-									final MessageDialog dialog = new MessageDialog(shell, shell.getStyle(), "Error",
+									final MessageDialog dialog = new MessageDialog(shlNoBsFile, shlNoBsFile.getStyle(), "Error",
 											"File extension not allowed!");
 									dialog.open();
 								}
@@ -75,18 +78,18 @@ public class FileDownloader {
 				}
 			}
 		});
-		btnDownload.setBounds(10, 202, 719, 25);
+		btnDownload.setBounds(10, 127, 719, 25);
 		btnDownload.setText("Download");
 
-		txtSavePath = new Text(shell, SWT.BORDER | SWT.READ_ONLY | SWT.H_SCROLL | SWT.CANCEL);
+		txtSavePath = new Text(shlNoBsFile, SWT.BORDER | SWT.READ_ONLY | SWT.H_SCROLL | SWT.CANCEL);
 		txtSavePath.setEditable(false);
-		txtSavePath.setBounds(128, 175, 601, 21);
+		txtSavePath.setBounds(128, 100, 601, 21);
 
-		Button btnBrowse = new Button(shell, SWT.NONE);
+		Button btnBrowse = new Button(shlNoBsFile, SWT.NONE);
 		btnBrowse.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseDown(MouseEvent e) {
-				DirectoryDialog dialog = new DirectoryDialog(shell);
+				DirectoryDialog dialog = new DirectoryDialog(shlNoBsFile);
 				dialog.setMessage("Choose Save Location");
 				String dir = dialog.open();
 				if (dir != null) {
@@ -94,17 +97,22 @@ public class FileDownloader {
 				}
 			}
 		});
-		btnBrowse.setBounds(10, 175, 112, 21);
+		btnBrowse.setBounds(10, 100, 112, 21);
 		btnBrowse.setText("Browse");
 
-		Label lblSaveTo = new Label(shell, SWT.NONE);
+		Label lblSaveTo = new Label(shlNoBsFile, SWT.NONE);
 		lblSaveTo.setAlignment(SWT.CENTER);
-		lblSaveTo.setBounds(10, 154, 719, 15);
+		lblSaveTo.setBounds(10, 79, 719, 15);
 		lblSaveTo.setText("Save To");
+		
+		Label lblCopyright = new Label(shlNoBsFile, SWT.NONE);
+		lblCopyright.setFont(SWTResourceManager.getFont("Segoe UI", 6, SWT.ITALIC));
+		lblCopyright.setBounds(10, 168, 152, 15);
+		lblCopyright.setText("Copyright 2019 Puyodead1");
 
-		shell.open();
-		shell.layout();
-		while (!shell.isDisposed()) {
+		shlNoBsFile.open();
+		shlNoBsFile.layout();
+		while (!shlNoBsFile.isDisposed()) {
 			if (!display.readAndDispatch()) {
 				display.sleep();
 			}

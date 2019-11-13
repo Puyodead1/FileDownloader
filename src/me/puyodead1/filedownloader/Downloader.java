@@ -1,6 +1,5 @@
 package me.puyodead1.filedownloader;
 
-import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.RandomAccessFile;
@@ -14,7 +13,8 @@ import org.eclipse.swt.widgets.Shell;
 public class Downloader implements Runnable {
 	private static final int MAX_BUFFER_SIZE = 1024;
 
-	public static final String STATUSES[] = { "Downloading", "Paused", "Complete", "Cancelled", "Error" };
+	public static final String STATUSES[] = {"Downloading", "Paused",
+			"Complete", "Cancelled", "Error"};
 
 	public static final int DOWNLOADING = 0;
 	public static final int PAUSED = 1;
@@ -22,17 +22,22 @@ public class Downloader implements Runnable {
 	public static final int CANCELLED = 3;
 	public static final int ERROR = 4;
 
-	private Shell parentShell;
+	private Shell downloadDialogShell, parentShell;
 	private URL url;
 	private int size;
 	private int downloaded;
 	private int status;
 	private String output;
+	private DownloadDialog downloadDialog;
 
-	public Downloader(Shell parent, URL url, String output) {
-		this.parentShell = parent;
+	public Downloader(DownloadDialog downloadDialog, Shell parentShell,
+			Shell downloadDialogShell, URL url, String output) {
+		this.downloadDialogShell = downloadDialogShell;
+		this.parentShell = parentShell;
 		this.url = url;
 		this.output = output;
+		this.downloadDialog = downloadDialog;
+
 		size = -1;
 		downloaded = 0;
 		status = DOWNLOADING;
@@ -56,6 +61,10 @@ public class Downloader implements Runnable {
 		return status;
 	}
 
+	public void setStatus(int status) {
+		this.status = status;
+	}
+
 	private void error() {
 		status = ERROR;
 		stateChanged();
@@ -72,7 +81,8 @@ public class Downloader implements Runnable {
 
 		try {
 			// Open connection to URL.
-			HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+			HttpURLConnection connection = (HttpURLConnection) url
+					.openConnection();
 
 			// Specify what portion of file to download.
 			connection.setRequestProperty("Range", "bytes=" + downloaded + "-");
@@ -102,58 +112,46 @@ public class Downloader implements Runnable {
 			}
 
 			// Open file and seek to the end of it.
-			try {
-				file = new RandomAccessFile(output, "rw");
-				file.seek(downloaded);
+			file = new RandomAccessFile(output, "rw");
+			file.seek(downloaded);
 
-				stream = connection.getInputStream();
-				while (status == DOWNLOADING) {
-					/*
-					 * Size buffer according to how much of the file is left to download.
-					 */
-					byte buffer[];
-					if (size - downloaded > MAX_BUFFER_SIZE) {
-						buffer = new byte[MAX_BUFFER_SIZE];
-					} else {
-						buffer = new byte[size - downloaded];
-					}
-
-					// Read from server into buffer.
-					int read = stream.read(buffer);
-					if (read == -1)
-						break;
-
-					// Write buffer to file.
-					file.write(buffer, 0, read);
-					downloaded += read;
-					stateChanged();
-				}
-
+			stream = connection.getInputStream();
+			while (status == DOWNLOADING) {
 				/*
-				 * Change status to complete if this point was reached because downloading has
-				 * finished.
+				 * Size buffer according to how much of the file is left to
+				 * download.
 				 */
-				if (status == DOWNLOADING) {
-					status = COMPLETE;
-					stateChanged();
+				byte buffer[];
+				if (size - downloaded > MAX_BUFFER_SIZE) {
+					buffer = new byte[MAX_BUFFER_SIZE];
+				} else {
+					buffer = new byte[size - downloaded];
 				}
-			} catch (Throwable t) {
-				Display.getDefault().asyncExec(new Runnable() {
 
-					@Override
-					public void run() {
-						final MessageDialog dialog = new MessageDialog(parentShell, parentShell.getStyle(), "Error",
-								t.getMessage());
-						dialog.open();
-					}
-				});
-				error();
+				// Read from server into buffer.
+				int read = stream.read(buffer);
+				if (read == -1)
+					break;
+
+				// Write buffer to file.
+				file.write(buffer, 0, read);
+				downloaded += read;
+				stateChanged();
+			}
+
+			/*
+			 * Change status to complete if this point was reached because
+			 * downloading has finished.
+			 */
+			if (status == DOWNLOADING) {
+				status = COMPLETE;
+				stateChanged();
 			}
 		} catch (Exception e) {
-			error();
 			StringWriter writer = new StringWriter();
 			e.printStackTrace(new PrintWriter(writer));
 			System.out.println(writer.toString());
+			error();
 		} finally {
 			// Close file.
 			if (file != null) {
@@ -182,34 +180,39 @@ public class Downloader implements Runnable {
 	private void stateChanged() {
 		if (status == ERROR) {
 			Display.getDefault().asyncExec(new Runnable() {
-
 				@Override
 				public void run() {
-					final MessageDialog dialog = new MessageDialog(parentShell, parentShell.getStyle(), "Error",
+					System.out.println("error downloading");
+					final MessageDialog dialog = new MessageDialog(parentShell,
+							parentShell.getStyle(), "Error",
 							"An error occured and the download could not complete!");
 					dialog.open();
-
 				}
 			});
 		} else if (status == DOWNLOADING) {
-			// update progess bar
-			int progress = Math.round(this.getProgress());
-
-			Display.getDefault().asyncExec(new Runnable() {
+			final int progress = Math.round(this.getProgress());
+			
+			downloadDialogShell.getDisplay().asyncExec(new Runnable() {
 				public void run() {
-					// DownloadDialog.progressBar.setText(progress + "%");
-					System.out.println(progress + "%");
+					downloadDialog.progressBar.setSelection(progress);
+					downloadDialog.lblProgress.setText(progress + "%");
 				}
 			});
 		} else if (status == COMPLETE) {
+			downloadDialogShell.getDisplay().asyncExec(new Runnable() {
+				public void run() {
+					downloadDialog.progressBar.setSelection(100);
+				}
+			});
 			Display.getDefault().asyncExec(new Runnable() {
 
 				@Override
 				public void run() {
-					final MessageDialog dialog = new MessageDialog(parentShell, parentShell.getStyle(), "Complete",
+					downloadDialogShell.close();
+					final MessageDialog dialog = new MessageDialog(parentShell,
+							parentShell.getStyle(), "Complete",
 							"File download complete!");
 					dialog.open();
-
 				}
 			});
 		}
